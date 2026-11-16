@@ -1,5 +1,6 @@
 const { normalizarTelefono } = require('./lib/telefono');
 const { extraerFichaConReglas } = require('./lib/reglas');
+const { buscarDepartamento, ubicarLocalidad } = require('./lib/geografia');
 
 const LARGO_MINIMO_TEXTO = 40;
 
@@ -16,14 +17,28 @@ function texto(valor, maximo = 120) {
   return limpio ? limpio.slice(0, maximo) : null;
 }
 
+/**
+ * Usa los nombres oficiales de departamento y localidad. Si la localidad existe,
+ * manda sobre el departamento escrito (ej. "Dolores" siempre es Soriano).
+ */
+function normalizarUbicacion(departamento, localidad) {
+  let dep = buscarDepartamento(departamento)?.nombre ?? texto(departamento, 60);
+  let loc = texto(localidad, 60);
+  const ubicacion = ubicarLocalidad(loc, dep);
+  if (ubicacion) {
+    loc = ubicacion.localidad;
+    dep = ubicacion.departamento;
+  }
+  return { departamento: dep, localidad: loc };
+}
+
 /** La agenda guarda solo: nombre, teléfono, email, departamento y localidad. */
 function normalizarContacto(entrada) {
   return {
     nombre: texto(entrada.nombre),
     telefono: normalizarTelefono(entrada.telefono),
     email: texto(entrada.email)?.toLowerCase() || null,
-    departamento: texto(entrada.departamento, 60),
-    localidad: texto(entrada.localidad, 60),
+    ...normalizarUbicacion(entrada.departamento, entrada.localidad),
   };
 }
 

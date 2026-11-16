@@ -8,6 +8,7 @@
  */
 
 const { normalizarTelefono } = require('./telefono');
+const { buscarDepartamento } = require('./geografia');
 
 const MESES = {
   enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
@@ -239,7 +240,10 @@ function extraerFichaConReglas(texto) {
   })();
 
   // "Mercedes, Soriano, Uruguay" o "Mercedes, Soriano  |  099 ..." (el Word no trae "Uruguay")
-  const ciudadMatch = texto.match(/([^\n,|]+),\s*([^\n,|]+?)\s*(?:,\s*Uruguay|\s*\||\s*$)/m);
+  // Solo acepta "ciudad, departamento" si el segundo valor es un departamento real de Uruguay.
+  const ciudadMatch = lineas
+    .map((linea) => linea.match(/^([^,|]+),\s*([^,|]+?)\s*(?:,\s*Uruguay|\s*\||$)/))
+    .find((m) => m && buscarDepartamento(m[2].trim())) || null;
   const personasMatches = [...texto.matchAll(/(\d{1,3})\s+personas a cargo/gi)].map((m) => Number(m[1]));
   const personasACargo = personasMatches.length ? Math.max(...personasMatches) : null;
 

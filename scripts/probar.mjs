@@ -14,7 +14,7 @@ import { extraerTextoPdf, extraerTextoDocx } from '../public/extraer-texto.mjs';
 const require = createRequire(import.meta.url);
 const mammoth = require('mammoth');
 const { normalizarTelefono } = require('../src/lib/telefono.js');
-const { ServicioFichas, ErrorValidacion } = require('../src/servicio-fichas.js');
+const { ServicioFichas, ErrorValidacion, normalizarContacto } = require('../src/servicio-fichas.js');
 const { PersistenciaMemoria } = require('../src/persistencia-memoria.js');
 
 // 1) Teléfonos
@@ -22,6 +22,15 @@ assert.equal(normalizarTelefono('099 89 78 39'), '+598 99 897 839');
 assert.equal(normalizarTelefono('+59898107986'), '+598 98 107 986');
 assert.equal(normalizarTelefono('12345'), null);
 console.log('ok  teléfono');
+
+// 1b) Ubicación: nombres oficiales y localidad manda sobre el departamento escrito
+const u = (d, l) => normalizarContacto({ departamento: d, localidad: l });
+assert.equal(u('soriano', 'dolores').localidad, 'Dolores');
+assert.equal(u('Florida', 'cardal').departamento, 'Florida');
+assert.equal(u(null, 'Bella Union').departamento, 'Artigas');
+assert.equal(u('Soriano', 'Montevideo').departamento, 'Montevideo');
+assert.equal(u('Soriano', 'Pueblo Inventado').localidad, 'Pueblo Inventado');
+console.log('ok  departamento y localidad');
 
 // 2) Agenda: alta manual, edición, duplicados, validación y eliminación
 const servicio = new ServicioFichas(new PersistenciaMemoria());

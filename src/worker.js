@@ -1,6 +1,7 @@
 import { ServicioFichas, ErrorValidacion } from './servicio-fichas.js';
 import { PersistenciaMemoria } from './persistencia-memoria.js';
 import { validarPersistencia } from './interfaz-persistencia.js';
+import { DATOS as GEOGRAFIA } from './lib/geografia.js';
 
 // Una instancia por proceso del Worker. Ver persistencia-memoria.js para el alcance de los datos.
 const servicio = new ServicioFichas(validarPersistencia(new PersistenciaMemoria()));
@@ -21,6 +22,12 @@ async function leerJson(request) {
 
 async function manejarApi(request, url) {
   const partes = url.pathname.split('/').filter(Boolean); // ['api', 'fichas', id?, accion?]
+
+  // /api/geografia: departamentos y localidades de Uruguay para el formulario
+  if (partes[0] === 'api' && partes[1] === 'geografia' && request.method === 'GET') {
+    return respuestaJson(GEOGRAFIA);
+  }
+
   if (partes[0] !== 'api' || partes[1] !== 'fichas') {
     throw new ErrorValidacion('Ruta no encontrada', 404);
   }

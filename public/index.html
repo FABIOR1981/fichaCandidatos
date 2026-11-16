@@ -58,8 +58,13 @@
           <label>Nombre completo *<input name="nombre" required></label>
           <label>Teléfono<input name="telefono" placeholder="099 123 456"></label>
           <label>Email<input name="email" type="email"></label>
-          <label>Departamento<input name="departamento"></label>
-          <label>Localidad<input name="localidad"></label>
+          <label>Departamento
+            <select name="departamento"><option value="">—</option></select>
+          </label>
+          <label>Localidad
+            <input name="localidad" list="lista-localidades" placeholder="Elegí un departamento primero">
+            <datalist id="lista-localidades"></datalist>
+          </label>
         </div>
         <p id="error-form" class="error" hidden></p>
         <div class="acciones">

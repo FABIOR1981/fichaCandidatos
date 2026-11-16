@@ -1,0 +1,23 @@
+{
+  "departamentos": [
+    { "nombre": "Artigas", "capital": "Artigas", "localidades": ["Artigas", "Bella Unión", "Tomás Gomensoro", "Baltasar Brum", "Sequeira"] },
+    { "nombre": "Canelones", "capital": "Canelones", "localidades": ["Canelones", "Ciudad de la Costa", "Las Piedras", "Pando", "Barros Blancos", "18 de Mayo", "La Paz", "Santa Lucía", "Progreso", "Paso Carrasco", "Atlántida", "Sauce", "Tala", "San Ramón", "Parque del Plata", "Salinas", "Joaquín Suárez"] },
+    { "nombre": "Cerro Largo", "capital": "Melo", "localidades": ["Melo", "Río Branco", "Fraile Muerto", "Isidoro Noblía", "Aceguá", "Tupambaé", "Plácido Rosas"] },
+    { "nombre": "Colonia", "capital": "Colonia del Sacramento", "localidades": ["Colonia del Sacramento", "Carmelo", "Juan Lacaze", "Nueva Helvecia", "Rosario", "Nueva Palmira", "Tarariras", "Colonia Valdense", "Florencio Sánchez", "Ombúes de Lavalle"] },
+    { "nombre": "Durazno", "capital": "Durazno", "localidades": ["Durazno", "Sarandí del Yí", "Villa del Carmen", "La Paloma", "Centenario", "Santa Bernardina", "Blanquillo", "Carlos Reyles"] },
+    { "nombre": "Flores", "capital": "Trinidad", "localidades": ["Trinidad", "Ismael Cortinas"] },
+    { "nombre": "Florida", "capital": "Florida", "localidades": ["Florida", "Sarandí Grande", "Casupá", "Fray Marcos", "25 de Mayo", "25 de Agosto", "Cardal", "Nico Pérez", "Cerro Colorado"] },
+    { "nombre": "Lavalleja", "capital": "Minas", "localidades": ["Minas", "José Pedro Varela", "Solís de Mataojo", "José Batlle y Ordóñez"] },
+    { "nombre": "Maldonado", "capital": "Maldonado", "localidades": ["Maldonado", "Punta del Este", "San Carlos", "Piriápolis", "Pan de Azúcar", "Aiguá", "Garzón", "Solís Grande"] },
+    { "nombre": "Montevideo", "capital": "Montevideo", "localidades": ["Montevideo"] },
+    { "nombre": "Paysandú", "capital": "Paysandú", "localidades": ["Paysandú", "Guichón", "Quebracho", "Porvenir", "Piedras Coloradas", "Tambores", "Lorenzo Geyres", "Chapicuy"] },
+    { "nombre": "Río Negro", "capital": "Fray Bentos", "localidades": ["Fray Bentos", "Young", "Nuevo Berlín", "San Javier"] },
+    { "nombre": "Rivera", "capital": "Rivera", "localidades": ["Rivera", "Tranqueras", "Vichadero", "Minas de Corrales"] },
+    { "nombre": "Rocha", "capital": "Rocha", "localidades": ["Rocha", "Chuy", "Castillos", "Lascano", "La Paloma"] },
+    { "nombre": "Salto", "capital": "Salto", "localidades": ["Salto", "Villa Constitución", "Belén", "San Antonio", "Rincón de Valentín", "Mataojo", "Colonia Lavalleja"] },
+    { "nombre": "San José", "capital": "San José de Mayo", "localidades": ["San José de Mayo", "Ciudad del Plata", "Libertad", "Ecilda Paullier", "Rodríguez"] },
+    { "nombre": "Soriano", "capital": "Mercedes", "localidades": ["Mercedes", "Dolores", "Cardal", "Cardona", "Palmitas", "José Enrique Rodó"] },
+    { "nombre": "Tacuarembó", "capital": "Tacuarembó", "localidades": ["Tacuarembó", "Paso de los Toros", "San Gregorio de Polanco", "Villa Ansina"] },
+    { "nombre": "Treinta y Tres", "capital": "Treinta y Tres", "localidades": ["Treinta y Tres", "Vergara", "Santa Clara de Olimar"] }
+  ]
+}

@@ -3,7 +3,7 @@ import { extraerTextoPdf, extraerTextoDocx } from './extraer-texto.mjs';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
 
-const estado = { contactos: [], filtro: '' };
+const estado = { contactos: [], filtro: '', departamentos: [] };
 const $ = (selector) => document.querySelector(selector);
 
 function escapar(valor) {
@@ -106,6 +106,27 @@ async function eliminarContacto(c) {
 
 const CAMPOS = ['nombre', 'telefono', 'email', 'departamento', 'localidad'];
 
+async function cargarDepartamentos() {
+  const datos = await pedir('/api/geografia');
+  estado.departamentos = datos.departamentos;
+  const select = $('#form-ficha').elements.departamento;
+  for (const d of estado.departamentos) {
+    select.add(new Option(d.nombre, d.nombre));
+  }
+}
+
+/** Llena las sugerencias de localidad según el departamento elegido. */
+function actualizarLocalidades(nombreDepartamento) {
+  const datalist = $('#lista-localidades');
+  const departamento = estado.departamentos.find((d) => d.nombre === nombreDepartamento);
+  datalist.innerHTML = departamento
+    ? departamento.localidades.map((l) => `<option value="${escapar(l)}"></option>`).join('')
+    : '';
+  $('#form-ficha').elements.localidad.placeholder = departamento
+    ? `Ej.: ${departamento.capital}`
+    : 'Elegí un departamento primero';
+}
+
 function abrirFormulario(contacto = null) {
   const form = $('#form-ficha');
   form.reset();
@@ -113,8 +134,12 @@ function abrirFormulario(contacto = null) {
   $('#titulo-formulario').textContent = contacto ? 'Editar contacto' : 'Nuevo contacto';
   form.dataset.id = contacto ? contacto.id : '';
   if (contacto) {
-    for (const campo of CAMPOS) form.elements[campo].value = contacto[campo] ?? '';
+    for (const campo of ['nombre', 'telefono', 'email', 'localidad']) {
+      form.elements[campo].value = contacto[campo] ?? '';
+    }
+    form.elements.departamento.value = contacto.departamento ?? '';
   }
+  actualizarLocalidades(form.elements.departamento.value);
   $('#formulario').hidden = false;
   $('#formulario').scrollIntoView({ behavior: 'smooth' });
   form.elements.nombre.focus();
@@ -226,11 +251,18 @@ function iniciar() {
     if (contacto) renderDetalle(contacto);
   });
 
+  $('#form-ficha').elements.departamento.addEventListener('change', (e) => {
+    actualizarLocalidades(e.target.value);
+  });
+
   $('#btn-nueva').addEventListener('click', () => abrirFormulario());
   $('#btn-cancelar-form').addEventListener('click', cerrarFormulario);
   $('#btn-cancelar-form-2').addEventListener('click', cerrarFormulario);
   $('#form-ficha').addEventListener('submit', guardarFormulario);
 
+  cargarDepartamentos().catch((error) => {
+    agregarProgreso('Departamentos', `no se pudieron cargar: ${error.message}`, 'error');
+  });
   cargarContactos().catch((error) => {
     agregarProgreso('Listado', `no se pudo cargar: ${error.message}`, 'error');
   });
