@@ -268,27 +268,30 @@ async function procesarArchivos(archivos) {
 
 function configurarArrastre() {
   const zona = $('#zona-soltar');
-  let contador = 0;
+  const ocultar = () => { zona.hidden = true; };
 
   const esArchivo = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
 
   window.addEventListener('dragenter', (e) => {
     if (!esArchivo(e)) return;
-    contador++;
     zona.hidden = false;
   });
-  window.addEventListener('dragleave', () => {
-    contador = Math.max(0, contador - 1);
-    if (contador === 0) zona.hidden = true;
+  // Se oculta solo cuando el puntero sale de la ventana, no al pasar por elementos hijos.
+  window.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null || e.clientX <= 0 || e.clientY <= 0
+        || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+      ocultar();
+    }
   });
   window.addEventListener('dragover', (e) => {
     if (esArchivo(e)) e.preventDefault();
   });
+  window.addEventListener('dragend', ocultar);
+  window.addEventListener('blur', ocultar);
   window.addEventListener('drop', async (e) => {
     if (!esArchivo(e)) return;
     e.preventDefault();
-    contador = 0;
-    zona.hidden = true;
+    ocultar();
     await procesarArchivos([...e.dataTransfer.files]);
   });
 }
