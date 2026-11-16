@@ -3,8 +3,12 @@ import { extraerTextoPdf, extraerTextoDocx } from './extraer-texto.mjs';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
 
-const estado = { contactos: [], filtro: '', departamentos: [] };
+const OPCION_OTRA = '__otra__';
+const estado = { contactos: [], filtro: '', departamentos: [], contactoAbierto: null };
 const $ = (selector) => document.querySelector(selector);
+const dialogo = $('#dialogo-form');
+const form = $('#form-contacto');
+const drawer = $('#detalle');
 
 function escapar(valor) {
   return String(valor ?? '')
@@ -12,10 +16,6 @@ function escapar(valor) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function texto(valor, respaldo = '—') {
-  return valor === null || valor === undefined || valor === '' ? respaldo : escapar(valor);
 }
 
 async function pedir(url, opciones = {}) {
@@ -31,11 +31,6 @@ async function pedir(url, opciones = {}) {
 
 // ---------- Listado ----------
 
-async function cargarContactos() {
-  estado.contactos = await pedir('/api/fichas');
-  renderTabla();
-}
-
 function contactosFiltrados() {
   const filtro = estado.filtro.trim().toLowerCase();
   if (!filtro) return estado.contactos;
@@ -50,76 +45,93 @@ function contactosFiltrados() {
 
 function renderTabla() {
   const contactos = contactosFiltrados();
-  $('#contador').textContent = `${contactos.length} de ${estado.contactos.length}`;
-  $('#vacio').hidden = estado.contactos.length > 0;
-  $('#tabla-fichas').innerHTML = contactos
+  const total = estado.contactos.length;
+
+  $('#resumen').textContent = total === 1 ? '1 contacto' : `${total} contactos`;
+
+  const hayContactos = total > 0;
+  const vacio = $('#vacio');
+  vacio.hidden = contactos.length > 0;
+  $('#vacio-texto').textContent = hayContactos
+    ? `Sin resultados para “${estado.filtro.trim()}”.`
+    : 'Todavía no hay contactos. Subí CVs o agregá uno a mano.';
+
+  $('#tabla-contactos').innerHTML = contactos
     .map((c) => `
       <tr data-id="${escapar(c.id)}">
-        <td>${texto(c.nombre, 'Sin nombre')}</td>
-        <td>${texto(c.telefono)}</td>
-        <td>${texto(c.email)}</td>
-        <td>${texto(c.departamento)}</td>
-        <td>${texto(c.localidad)}</td>
-        <td>${c.alertas?.length ? `<span class="alerta">${c.alertas.length}</span>` : ''}</td>
+        <td>${escapar(c.nombre || 'Sin nombre')}</td>
+        <td>${c.telefono ? escapar(c.telefono) : '<span class="texto-vacio">—</span>'}</td>
+        <td class="oculto-movil">${c.email ? escapar(c.email) : '<span class="texto-vacio">—</span>'}</td>
+        <td>${c.departamento ? escapar(c.departamento) : '<span class="texto-vacio">—</span>'}</td>
+        <td>${c.localidad ? escapar(c.localidad) : '<span class="texto-vacio">—</span>'}</td>
+        <td>${c.alertas?.length ? `<span class="alerta-chip" title="${escapar(c.alertas.join(' · '))}">${c.alertas.length}</span>` : ''}</td>
       </tr>`)
     .join('');
 }
 
-// ---------- Detalle ----------
+// ---------- Panel de detalle ----------
 
-function renderDetalle(c) {
-  $('#detalle').innerHTML = `
-    <div class="cabecera-detalle">
-      <h2>${texto(c.nombre, 'Sin nombre')}</h2>
-      <div class="acciones">
-        <button id="btn-editar" type="button" class="primario">Editar</button>
-        <button id="btn-eliminar" type="button" class="peligro">Eliminar</button>
-        <button id="btn-cerrar" type="button">Cerrar</button>
+function filaDato(etiqueta, valor) {
+  return `<div class="fila"><dt>${escapar(etiqueta)}</dt><dd>${valor || '<span class="texto-vacio">—</span>'}</dd></div>`;
+}
+
+function abrirDetalle(c) {
+  estado.contactoAbierto = c;
+  const ubicacion = [c.localidad, c.departamento].filter(Boolean).join(', ');
+  drawer.innerHTML = `
+    <div class="cabecera-drawer">
+      <div>
+        <h2>${escapar(c.nombre || 'Sin nombre')}</h2>
+        <p class="subtitulo">${ubicacion ? escapar(ubicacion) : 'Sin ubicación'}</p>
       </div>
+      <button type="button" id="cerrar-detalle" class="boton-icono" aria-label="Cerrar">×</button>
     </div>
-    <dl class="datos">
-      <dt>Teléfono</dt><dd>${texto(c.telefono)}</dd>
-      <dt>Email</dt><dd>${texto(c.email)}</dd>
-      <dt>Departamento</dt><dd>${texto(c.departamento)}</dd>
-      <dt>Localidad</dt><dd>${texto(c.localidad)}</dd>
+    <dl>
+      ${filaDato('Teléfono', c.telefono ? escapar(c.telefono) : '')}
+      ${filaDato('Email', c.email ? escapar(c.email) : '')}
+      ${filaDato('Departamento', c.departamento ? escapar(c.departamento) : '')}
+      ${filaDato('Localidad', c.localidad ? escapar(c.localidad) : '')}
     </dl>
-    ${c.alertas?.length ? `<div class="alertas">${c.alertas.map(escapar).join(' · ')}</div>` : ''}
-    <p class="pie-detalle">Origen: ${c.archivo_origen ? escapar(c.archivo_origen) : 'carga manual'} · Actualizado: ${texto(c.actualizada_en || c.creada_en)}</p>
+    ${c.alertas?.length ? `<div class="alertas">${c.alertas.map((a) => `<span class="alerta-chip">${escapar(a)}</span>`).join('')}</div>` : ''}
+    <div class="acciones">
+      <button type="button" id="btn-editar" class="boton primario">Editar</button>
+      <button type="button" id="btn-eliminar" class="boton peligro">Eliminar</button>
+    </div>
+    <p class="origen">${c.archivo_origen ? `Cargado desde ${escapar(c.archivo_origen)}` : 'Cargado a mano'}</p>
   `;
+  drawer.hidden = false;
+  $('#cerrar-detalle').addEventListener('click', cerrarDetalle);
+  $('#btn-editar').addEventListener('click', () => abrirFormulario(c));
+  $('#btn-eliminar').addEventListener('click', () => eliminarContacto(c));
+  $('#cerrar-detalle').focus();
+}
 
-  $('#detalle').hidden = false;
-  $('#detalle').scrollIntoView({ behavior: 'smooth' });
-  $('#btn-cerrar').onclick = () => { $('#detalle').hidden = true; };
-  $('#btn-editar').onclick = () => abrirFormulario(c);
-  $('#btn-eliminar').onclick = () => eliminarContacto(c);
+function cerrarDetalle() {
+  drawer.hidden = true;
+  estado.contactoAbierto = null;
 }
 
 async function eliminarContacto(c) {
   if (!confirm(`¿Eliminar a ${c.nombre || 'este contacto'}?`)) return;
   await pedir(`/api/fichas/${c.id}`, { method: 'DELETE' });
   estado.contactos = estado.contactos.filter((x) => x.id !== c.id);
-  $('#detalle').hidden = true;
+  cerrarDetalle();
   renderTabla();
 }
 
 // ---------- Formulario (alta y edición) ----------
 
-const CAMPOS = ['nombre', 'telefono', 'email', 'departamento', 'localidad'];
-
 async function cargarDepartamentos() {
   const datos = await pedir('/api/geografia');
   estado.departamentos = datos.departamentos;
-  const select = $('#form-ficha').elements.departamento;
+  const select = form.elements.departamento;
   for (const d of estado.departamentos) {
     select.add(new Option(d.nombre, d.nombre));
   }
 }
 
-const OPCION_OTRA = '__otra__';
-
-/** Llena la lista de localidades del departamento: primero las precargadas, al final "Otra". */
+/** Lista de localidades del departamento: primero las precargadas, al final "Otra". */
 function actualizarLocalidades(nombreDepartamento, localidadSeleccionada = '') {
-  const form = $('#form-ficha');
   const select = form.elements.localidad;
   const departamento = estado.departamentos.find((d) => d.nombre === nombreDepartamento);
   const precargadas = departamento ? departamento.localidades : [];
@@ -139,50 +151,42 @@ function actualizarLocalidades(nombreDepartamento, localidadSeleccionada = '') {
 }
 
 function mostrarCampoOtra() {
-  const form = $('#form-ficha');
   const escribiendo = form.elements.localidad.value === OPCION_OTRA;
   form.elements.localidad_otra.hidden = !escribiendo;
   if (escribiendo) form.elements.localidad_otra.focus();
 }
 
-/** La localidad elegida de la lista o, si es "Otra", el texto escrito. */
-function localidadDelFormulario(form) {
+function localidadDelFormulario() {
   const valor = form.elements.localidad.value;
   return (valor === OPCION_OTRA ? form.elements.localidad_otra.value : valor).trim() || null;
 }
 
 function abrirFormulario(contacto = null) {
-  const form = $('#form-ficha');
   form.reset();
   $('#error-form').hidden = true;
-  $('#titulo-formulario').textContent = contacto ? 'Editar contacto' : 'Nuevo contacto';
+  $('#titulo-form').textContent = contacto ? 'Editar contacto' : 'Nuevo contacto';
   form.dataset.id = contacto ? contacto.id : '';
   if (contacto) {
-    for (const campo of ['nombre', 'telefono', 'email']) {
-      form.elements[campo].value = contacto[campo] ?? '';
-    }
+    form.elements.nombre.value = contacto.nombre ?? '';
+    form.elements.telefono.value = contacto.telefono ?? '';
+    form.elements.email.value = contacto.email ?? '';
     form.elements.departamento.value = contacto.departamento ?? '';
   }
   actualizarLocalidades(form.elements.departamento.value, contacto?.localidad ?? '');
-  $('#formulario').hidden = false;
-  $('#formulario').scrollIntoView({ behavior: 'smooth' });
+  dialogo.showModal();
   form.elements.nombre.focus();
-}
-
-function cerrarFormulario() {
-  $('#formulario').hidden = true;
 }
 
 async function guardarFormulario(evento) {
   evento.preventDefault();
-  const form = evento.target;
   const id = form.dataset.id;
-  const datos = {};
-  for (const campo of CAMPOS) {
-    datos[campo] = campo === 'localidad'
-      ? localidadDelFormulario(form)
-      : form.elements[campo].value.trim() || null;
-  }
+  const datos = {
+    nombre: form.elements.nombre.value.trim() || null,
+    telefono: form.elements.telefono.value.trim() || null,
+    email: form.elements.email.value.trim() || null,
+    departamento: form.elements.departamento.value || null,
+    localidad: localidadDelFormulario(),
+  };
 
   try {
     const contacto = id
@@ -192,9 +196,10 @@ async function guardarFormulario(evento) {
     const indice = estado.contactos.findIndex((c) => c.id === contacto.id);
     if (indice >= 0) estado.contactos[indice] = contacto;
     else estado.contactos.unshift(contacto);
+
+    dialogo.close();
     renderTabla();
-    cerrarFormulario();
-    renderDetalle(contacto);
+    abrirDetalle(contacto);
   } catch (error) {
     const aviso = $('#error-form');
     aviso.textContent = error.message;
@@ -202,22 +207,29 @@ async function guardarFormulario(evento) {
   }
 }
 
-// ---------- Carga de archivos ----------
+// ---------- Carga de CVs ----------
+
+function mostrarPanelCarga() {
+  $('#panel-carga').hidden = false;
+}
 
 function agregarProgreso(nombre, mensaje, clase) {
+  mostrarPanelCarga();
   const item = document.createElement('li');
   item.className = clase;
-  item.textContent = `${nombre}: ${mensaje}`;
+  item.innerHTML = `<span class="estado-punto"></span><span></span>`;
+  item.lastElementChild.textContent = `${nombre}: ${mensaje}`;
   $('#progreso').prepend(item);
   return item;
 }
 
 async function extraerTexto(archivo) {
   const buffer = await archivo.arrayBuffer();
-  if (archivo.name.toLowerCase().endsWith('.pdf')) {
+  const nombre = archivo.name.toLowerCase();
+  if (nombre.endsWith('.pdf')) {
     return extraerTextoPdf(pdfjsLib, new Uint8Array(buffer));
   }
-  if (archivo.name.toLowerCase().endsWith('.docx')) {
+  if (nombre.endsWith('.docx')) {
     return extraerTextoDocx(window.mammoth, { arrayBuffer: buffer });
   }
   throw new Error('Formato no soportado (usá PDF o DOCX)');
@@ -225,6 +237,7 @@ async function extraerTexto(archivo) {
 
 async function procesarArchivo(archivo) {
   const item = agregarProgreso(archivo.name, 'procesando…', 'en-curso');
+  const mensaje = item.lastElementChild;
   try {
     const textoCv = await extraerTexto(archivo);
     const contacto = await pedir('/api/fichas/desde-texto', {
@@ -232,39 +245,61 @@ async function procesarArchivo(archivo) {
       body: JSON.stringify({ nombreArchivo: archivo.name, texto: textoCv }),
     });
     item.className = 'ok';
-    item.textContent = `${archivo.name}: contacto creado (${contacto.nombre || 'sin nombre detectado'})`;
+    mensaje.textContent = `${archivo.name}: ${contacto.nombre || 'contacto creado sin nombre'}`;
     estado.contactos.unshift(contacto);
     renderTabla();
   } catch (error) {
     item.className = 'error';
-    item.textContent = `${archivo.name}: ${error.message}`;
+    mensaje.textContent = `${archivo.name}: ${error.message}`;
   }
 }
 
 async function procesarArchivos(archivos) {
-  for (const archivo of archivos) {
+  const validos = archivos.filter((a) => /\.(pdf|docx)$/i.test(a.name));
+  for (const archivo of archivos.filter((a) => !validos.includes(a))) {
+    agregarProgreso(archivo.name, 'formato no soportado (usá PDF o DOCX)', 'error');
+  }
+  for (const archivo of validos) {
     await procesarArchivo(archivo);
   }
+}
+
+// ---------- Arrastrar archivos a cualquier parte ----------
+
+function configurarArrastre() {
+  const zona = $('#zona-soltar');
+  let contador = 0;
+
+  const esArchivo = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+
+  window.addEventListener('dragenter', (e) => {
+    if (!esArchivo(e)) return;
+    contador++;
+    zona.hidden = false;
+  });
+  window.addEventListener('dragleave', () => {
+    contador = Math.max(0, contador - 1);
+    if (contador === 0) zona.hidden = true;
+  });
+  window.addEventListener('dragover', (e) => {
+    if (esArchivo(e)) e.preventDefault();
+  });
+  window.addEventListener('drop', async (e) => {
+    if (!esArchivo(e)) return;
+    e.preventDefault();
+    contador = 0;
+    zona.hidden = true;
+    await procesarArchivos([...e.dataTransfer.files]);
+  });
 }
 
 // ---------- Inicio ----------
 
 function iniciar() {
-  const zona = $('#zona-carga');
-  const entrada = $('#entrada-archivos');
-
-  entrada.addEventListener('change', async () => {
-    const archivos = [...entrada.files];
-    entrada.value = '';
+  $('#entrada-archivos').addEventListener('change', async (e) => {
+    const archivos = [...e.target.files];
+    e.target.value = '';
     await procesarArchivos(archivos);
-  });
-
-  zona.addEventListener('dragover', (e) => { e.preventDefault(); zona.classList.add('activa'); });
-  zona.addEventListener('dragleave', () => zona.classList.remove('activa'));
-  zona.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    zona.classList.remove('activa');
-    await procesarArchivos([...e.dataTransfer.files]);
   });
 
   $('#buscar').addEventListener('input', (e) => {
@@ -272,29 +307,40 @@ function iniciar() {
     renderTabla();
   });
 
-  $('#tabla-fichas').addEventListener('click', (e) => {
+  $('#tabla-contactos').addEventListener('click', (e) => {
     const fila = e.target.closest('tr[data-id]');
     if (!fila) return;
     const contacto = estado.contactos.find((c) => c.id === fila.dataset.id);
-    if (contacto) renderDetalle(contacto);
+    if (contacto) abrirDetalle(contacto);
   });
 
-  $('#form-ficha').elements.departamento.addEventListener('change', (e) => {
-    actualizarLocalidades(e.target.value);
-  });
-  $('#form-ficha').elements.localidad.addEventListener('change', mostrarCampoOtra);
+  $('#btn-nuevo').addEventListener('click', () => abrirFormulario());
+  $('#btn-nuevo-vacio').addEventListener('click', () => abrirFormulario());
+  $('#cerrar-form').addEventListener('click', () => dialogo.close());
+  $('#cancelar-form').addEventListener('click', () => dialogo.close());
+  $('#cerrar-carga').addEventListener('click', () => { $('#panel-carga').hidden = true; });
 
-  $('#btn-nueva').addEventListener('click', () => abrirFormulario());
-  $('#btn-cancelar-form').addEventListener('click', cerrarFormulario);
-  $('#btn-cancelar-form-2').addEventListener('click', cerrarFormulario);
-  $('#form-ficha').addEventListener('submit', guardarFormulario);
+  form.elements.departamento.addEventListener('change', (e) => actualizarLocalidades(e.target.value));
+  form.elements.localidad.addEventListener('change', mostrarCampoOtra);
+  form.addEventListener('submit', guardarFormulario);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !drawer.hidden && !dialogo.open) cerrarDetalle();
+  });
+
+  configurarArrastre();
 
   cargarDepartamentos().catch((error) => {
     agregarProgreso('Departamentos', `no se pudieron cargar: ${error.message}`, 'error');
   });
-  cargarContactos().catch((error) => {
-    agregarProgreso('Listado', `no se pudo cargar: ${error.message}`, 'error');
-  });
+  pedir('/api/fichas')
+    .then((contactos) => {
+      estado.contactos = contactos;
+      renderTabla();
+    })
+    .catch((error) => {
+      agregarProgreso('Listado', `no se pudo cargar: ${error.message}`, 'error');
+    });
 }
 
 iniciar();

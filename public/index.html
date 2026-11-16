@@ -8,56 +8,79 @@
   <script src="vendor/mammoth.browser.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Agenda de candidatos <span class="etiqueta">prueba</span></h1>
-    <button type="button" id="btn-nueva" class="primario">+ Nuevo contacto</button>
-  </header>
-
-  <main>
-    <section class="carga">
-      <label class="zona-carga" id="zona-carga">
-        <input type="file" id="entrada-archivos" accept=".pdf,.docx" multiple hidden>
-        <strong>Subí uno o varios CVs en PDF o Word</strong>
-        <span>Arrastralos acá o hacé clic para elegirlos</span>
-      </label>
-      <ul id="progreso" class="progreso"></ul>
-    </section>
-
-    <section>
-      <div class="barra">
-        <input type="search" id="buscar" placeholder="Buscar por nombre, teléfono, email, localidad…">
-        <span id="contador" class="contador"></span>
+  <div class="app">
+    <header class="barra-superior">
+      <div class="marca">
+        <span class="marca-icono" aria-hidden="true">◎</span>
+        <div>
+          <h1>Agenda de candidatos</h1>
+          <p id="resumen" class="resumen-agenda"></p>
+        </div>
       </div>
-      <div class="tabla-contenedor">
+      <div class="herramientas">
+        <label class="buscador">
+          <span class="visualmente-oculto">Buscar</span>
+          <input type="search" id="buscar" placeholder="Buscar por nombre, teléfono, email o localidad">
+        </label>
+        <label class="boton secundario" for="entrada-archivos">Subir CVs</label>
+        <input type="file" id="entrada-archivos" accept=".pdf,.docx" multiple hidden>
+        <button type="button" id="btn-nuevo" class="boton primario">Nuevo contacto</button>
+      </div>
+    </header>
+
+    <main class="contenido">
+      <div class="tabla-marco" id="tabla-marco">
         <table>
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Email</th>
-              <th>Departamento</th>
-              <th>Localidad</th>
-              <th>Alertas</th>
+              <th scope="col">Nombre</th>
+              <th scope="col">Teléfono</th>
+              <th scope="col" class="oculto-movil">Email</th>
+              <th scope="col">Departamento</th>
+              <th scope="col">Localidad</th>
+              <th scope="col" class="columna-alertas">Alertas</th>
             </tr>
           </thead>
-          <tbody id="tabla-fichas"></tbody>
+          <tbody id="tabla-contactos"></tbody>
         </table>
-        <p id="vacio" class="vacio" hidden>Todavía no hay contactos. Subí un CV o creá uno nuevo.</p>
-      </div>
-    </section>
 
-    <section id="detalle" class="detalle" hidden></section>
-
-    <section id="formulario" class="formulario" hidden>
-      <div class="cabecera-detalle">
-        <h2 id="titulo-formulario">Nuevo contacto</h2>
-        <button type="button" id="btn-cancelar-form">Cancelar</button>
+        <div id="vacio" class="estado-vacio" hidden>
+          <p id="vacio-texto"></p>
+          <div class="estado-vacio-acciones">
+            <label class="boton secundario" for="entrada-archivos">Subir CVs</label>
+            <button type="button" id="btn-nuevo-vacio" class="boton primario">Nuevo contacto</button>
+          </div>
+        </div>
       </div>
-      <form id="form-ficha" novalidate>
+    </main>
+
+    <aside id="panel-carga" class="panel-carga" hidden aria-live="polite">
+      <header class="panel-cabecera">
+        <strong>Carga de CVs</strong>
+        <button type="button" id="cerrar-carga" class="boton-icono" aria-label="Cerrar">×</button>
+      </header>
+      <ul id="progreso" class="progreso"></ul>
+    </aside>
+
+    <aside id="detalle" class="drawer" hidden aria-label="Detalle del contacto"></aside>
+
+    <dialog id="dialogo-form" class="dialogo">
+      <form id="form-contacto" novalidate>
+        <header class="dialogo-cabecera">
+          <h2 id="titulo-form">Nuevo contacto</h2>
+          <button type="button" id="cerrar-form" class="boton-icono" aria-label="Cerrar">×</button>
+        </header>
+
         <div class="campos">
-          <label class="ancho">Nombre completo *<input name="nombre" required></label>
-          <label>Teléfono<input name="telefono" placeholder="099 123 456"></label>
-          <label>Email<input name="email" type="email"></label>
+          <label class="ancho">Nombre completo *
+            <input name="nombre" required autocomplete="off">
+          </label>
+          <label>Teléfono
+            <input name="telefono" placeholder="099 123 456" inputmode="tel">
+          </label>
+          <label>Email
+            <input name="email" type="email" autocomplete="off">
+          </label>
           <label>Departamento
             <select name="departamento"><option value="">—</option></select>
           </label>
@@ -66,18 +89,24 @@
             <input name="localidad_otra" placeholder="Escribí la localidad" hidden>
           </label>
         </div>
-        <p id="error-form" class="error" hidden></p>
-        <div class="acciones">
-          <button type="submit" class="primario">Guardar</button>
-          <button type="button" id="btn-cancelar-form-2">Cancelar</button>
-        </div>
-      </form>
-    </section>
-  </main>
 
-  <footer>
-    Datos personales de candidatos que los entregaron voluntariamente. Uso exclusivo para selección.
-  </footer>
+        <p id="error-form" class="error" hidden></p>
+
+        <footer class="dialogo-pie">
+          <button type="button" id="cancelar-form" class="boton secundario">Cancelar</button>
+          <button type="submit" class="boton primario">Guardar</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div id="zona-soltar" class="zona-soltar" hidden>
+      <div>Soltá los CVs para cargarlos</div>
+    </div>
+
+    <footer class="pie">
+      Datos personales de candidatos que los entregaron voluntariamente. Uso exclusivo para selección.
+    </footer>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
