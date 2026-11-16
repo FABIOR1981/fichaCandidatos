@@ -3,51 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fichas de candidatos (prueba)</title>
+  <title>Fichas de candidatos</title>
   <link rel="stylesheet" href="estilos.css">
+  <script src="vendor/mammoth.browser.min.js"></script>
 </head>
 <body>
   <header>
     <h1>Fichas de candidatos <span class="etiqueta">prueba</span></h1>
+    <button type="button" id="btn-nueva" class="primario">+ Nueva ficha</button>
   </header>
 
   <main>
     <section class="carga">
       <label class="zona-carga" id="zona-carga">
         <input type="file" id="entrada-archivos" accept=".pdf,.docx" multiple hidden>
-        <strong>Subí CVs en PDF o Word</strong>
-        <span>Podés elegir varios a la vez</span>
+        <strong>Subí uno o varios CVs en PDF o Word</strong>
+        <span>Arrastralos acá o hacé clic para elegirlos</span>
       </label>
       <ul id="progreso" class="progreso"></ul>
     </section>
 
-    <section class="listado">
+    <section>
       <div class="barra">
-        <input type="search" id="buscar" placeholder="Buscar por nombre, cargo, ciudad…">
+        <input type="search" id="buscar" placeholder="Buscar por nombre, cargo, ciudad, email…">
         <span id="contador" class="contador"></span>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Cargo</th>
-            <th>Teléfono</th>
-            <th>Email</th>
-            <th>Experiencia</th>
-            <th>Alertas</th>
-          </tr>
-        </thead>
-        <tbody id="tabla-fichas"></tbody>
-      </table>
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cargo</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Experiencia</th>
+              <th>Alertas</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-fichas"></tbody>
+        </table>
+        <p id="vacio" class="vacio" hidden>Todavía no hay fichas. Subí un CV o creá una nueva.</p>
+      </div>
     </section>
 
     <section id="detalle" class="detalle" hidden></section>
+
+    <section id="formulario" class="formulario" hidden>
+      <div class="cabecera-detalle">
+        <h2 id="titulo-formulario">Nueva ficha</h2>
+        <button type="button" id="btn-cancelar-form">Cancelar</button>
+      </div>
+      <form id="form-ficha" novalidate>
+        <fieldset>
+          <legend>Identificación</legend>
+          <div class="campos">
+            <label>Nombre completo *<input name="nombre_completo" required></label>
+            <label>Cédula <small>(se guarda enmascarada)</small><input name="cedula" placeholder="4.368.647-5"></label>
+            <label>Fecha de nacimiento<input name="fecha_nacimiento" placeholder="AAAA-MM-DD"></label>
+            <label>Edad<input name="edad" type="number" min="0"></label>
+            <label>Ciudad<input name="ciudad"></label>
+            <label>Departamento<input name="departamento"></label>
+            <label>Nacionalidad<input name="nacionalidad"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Contacto</legend>
+          <div class="campos">
+            <label>Teléfono principal<input name="telefono_principal" placeholder="099 123 456"></label>
+            <label>Teléfono alternativo<input name="telefono_alternativo"></label>
+            <label>Email<input name="email" type="email"></label>
+            <label class="ancho">Redes o web <small>(separadas por coma)</small><input name="redes_web"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Perfil laboral</legend>
+          <div class="campos">
+            <label>Cargo actual o último<input name="cargo_actual_o_ultimo"></label>
+            <label>Empresa actual o última<input name="empresa_actual_o_ultima"></label>
+            <label>Años de experiencia<input name="anios_experiencia_total" type="number" step="0.1" min="0"></label>
+            <label>Cantidad de empleos<input name="cantidad_empleos" type="number" min="0"></label>
+            <label>Personas a cargo (máx.)<input name="personas_a_cargo_max" type="number" min="0"></label>
+            <label class="ancho">Competencias clave <small>(separadas por coma)</small><input name="competencias_clave"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Formación y otros datos</legend>
+          <div class="campos">
+            <label>Formación máxima<input name="formacion_maxima"></label>
+            <label>Licencia de conducir<input name="licencia_conducir" placeholder="G2"></label>
+            <label>Vehículo propio
+              <select name="vehiculo_propio"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select>
+            </label>
+            <label>Referencias cargadas
+              <select name="referencias_cargadas"><option value="">—</option><option value="true">Sí</option><option value="false">No</option></select>
+            </label>
+            <label class="ancho">Idiomas <small>(separados por coma)</small><input name="idiomas"></label>
+            <label class="ancho">Cursos y certificaciones <small>(separados por coma)</small><input name="cursos_certificaciones"></label>
+            <label class="ancho">Destinos preferidos <small>(separados por coma)</small><input name="destinos_preferidos"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Texto</legend>
+          <div class="campos">
+            <label class="ancho">Perfil (texto original)<textarea name="perfil_texto" rows="3"></textarea></label>
+            <label class="ancho">Notas internas<textarea name="notas" rows="3"></textarea></label>
+          </div>
+        </fieldset>
+        <p id="error-form" class="error" hidden></p>
+        <div class="acciones">
+          <button type="submit" class="primario">Guardar</button>
+          <button type="button" id="btn-cancelar-form-2">Cancelar</button>
+        </div>
+      </form>
+    </section>
   </main>
 
   <footer>
     Datos personales de candidatos que los entregaron voluntariamente. Uso exclusivo para selección.
   </footer>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

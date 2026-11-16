@@ -1,20 +1,20 @@
 {
   "name": "ficha-candidatos",
   "version": "0.1.0",
-  "description": "Genera fichas de candidatos a partir de CVs (PDF/Word) usando una IA externa",
+  "description": "Fichas de candidatos desde CVs (PDF/Word) y carga manual, en un Cloudflare Worker",
   "private": true,
-  "main": "server.js",
+  "main": "src/worker.js",
   "scripts": {
-    "start": "node server.js",
-    "probar-extraccion": "node scripts/probar-extraccion.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "probar": "node scripts/probar.mjs"
+  },
+  "devDependencies": {
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^4.10.38",
+    "wrangler": "^4.163.0"
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "dotenv": "^18.0.10",
-    "express": "^4.22.3",
-    "mammoth": "^1.13.0",
-    "pdf-parse": "^1.1.1"
   }
 }

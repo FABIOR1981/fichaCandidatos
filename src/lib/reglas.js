@@ -7,7 +7,7 @@
  *  - "libre": Word o texto con secciones en mayúsculas (PERFIL PROFESIONAL, PROFESIONAL, FORMACIÓN...)
  */
 
-const { normalizarTelefono } = require('./extraccion');
+const { normalizarTelefono } = require('./telefono');
 
 const MESES = {
   enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,

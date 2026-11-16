@@ -1,57 +1,78 @@
-# Ficha de candidatos (prueba)
+# Fichas de candidatos
 
-Sube CVs en PDF o Word y genera una ficha con nombre, teléfono, email y otros datos.
-Todo el procesamiento ocurre dentro de la aplicación: no se envía ningún dato a servicios externos.
-Versión de prueba: los datos se guardan en un archivo JSON a través de `interfaz-persistencia.js`,
-para cambiar luego a base de datos.
+Aplicación web para ver, crear y editar fichas de candidatos. Las fichas se pueden crear
+a mano o subiendo uno o varios CVs en PDF o Word. Todo corre en Cloudflare Workers
+y no usa IA externa: el texto se extrae en el navegador y las reglas corren en el Worker.
+
+Versión de prueba: los datos se guardan **en memoria**. Se pierden al redesplegar o cuando
+Cloudflare reinicia el Worker.
 
 ## Estructura
 
 ```
 ficha-candidatos/
-├── server.js               Servidor Express y rutas /api/fichas
-├── interfaz-persistencia.js Contrato de persistencia (listar, obtener, guardar, eliminar)
-├── persistencia-json.js    Implementación en archivo JSON (data/fichas.json)
-├── lib/
-│   ├── extraccion.js       Lee PDF/DOCX, normaliza teléfono, enmascara cédula
-│   └── extraccion-reglas.js Extrae los campos de la ficha con reglas locales (sin IA)
-├── public/                 Frontend (index.html, app.js, estilos.css)
-├── scripts/probar-extraccion.js  Pruebas sin IA
-└── data/fichas.json        Se crea solo al primer uso
+├── wrangler.jsonc             Configuración del Worker (nombre, assets)
+├── src/
+│   ├── worker.js              Rutas /api/fichas y entrega de la interfaz
+│   ├── servicio-fichas.js     Reglas de negocio: validación, duplicados, alertas
+│   ├── persistencia-memoria.js Guarda las fichas en memoria (pruebas)
+│   ├── interfaz-persistencia.js Contrato: listar, obtener, guardar, eliminar
+│   └── lib/
+│       ├── reglas.js          Extrae los campos del texto del CV (sin IA)
+│       └── telefono.js        Teléfonos uruguayos y cédula enmascarada
+├── public/
+│   ├── index.html, app.js, estilos.css  Interfaz
+│   ├── extraer-texto.mjs      Lee PDF (pdf.js) y Word (mammoth) en el navegador
+│   └── vendor/                Copias de pdf.js y mammoth para el navegador
+└── scripts/probar.mjs         Pruebas locales
 ```
 
-## Puesta en marcha
+## API
 
-1. Requiere Node.js 18 o superior.
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/fichas` | Lista las fichas, más recientes primero |
+| POST | `/api/fichas` | Crea una ficha a mano |
+| POST | `/api/fichas/desde-texto` | Crea una ficha desde el texto de un CV (`{nombreArchivo, texto}`) |
+| GET | `/api/fichas/:id` | Devuelve una ficha |
+| PUT | `/api/fichas/:id` | Actualiza los campos enviados |
+| DELETE | `/api/fichas/:id` | Elimina una ficha |
+
+## Probar en tu computadora
+
+1. Tener Node.js 18 o superior.
 2. `npm install`
-3. (Opcional) Copiar `.env.example` a `.env` para cambiar el puerto.
-4. `npm start` y abrir http://localhost:3000 (no abrir `index.html` como archivo)
+3. `npm run probar -- /ruta/a/carpeta/con/cvs` (pruebas de extracción y servicio)
+4. `npm run dev` y abrir la URL que muestra (normalmente http://localhost:8787)
 
-## Pruebas
+## Desplegar en Cloudflare
 
-- `node scripts/probar-extraccion.js /ruta/a/cvs`: prueba normalización, cédula,
-  lectura de PDF/DOCX y persistencia (no llama a la IA).
+1. Tener una cuenta de Cloudflare.
+2. `npx wrangler login` (abre el navegador para autorizar).
+3. `npm run deploy`. Al terminar muestra la URL `https://ficha-candidatos.<tu-subdominio>.workers.dev`.
+4. **Proteger el acceso** (importante): en el panel de Cloudflare, Zero Trust → Access →
+   Applications, crear una aplicación self-hosted para esa URL y permitir solo tu email.
+   Sin esto, cualquiera con la URL puede ver y subir CVs con datos personales.
 
-## Ajustar la extracción
+Para cambiar el nombre de la URL, editar `name` en `wrangler.jsonc` antes de desplegar.
 
-Las reglas están en `lib/extraccion-reglas.js`. Cada campo se extrae con expresiones regulares
-o por sección (encabezados como "Experiencia laboral", "Datos Personales", "PROFESIONAL").
-Limitaciones conocidas:
-- El **cargo actual** es el campo más débil: en PDF de plataforma no siempre toma el puesto correcto.
+## Cambiar la memoria por una base de datos
+
+La interfaz de persistencia está en `src/interfaz-persistencia.js`. Para guardar en
+Cloudflare D1 o KV, crear una clase con `listar`, `obtener`, `guardar` y `eliminar`,
+y pasarla a `validarPersistencia` en `src/worker.js` en lugar de `PersistenciaMemoria`.
+
+## Extracción de CVs
+
+Las reglas están en `src/lib/reglas.js`. Limitaciones conocidas:
+- El **cargo actual** es el campo más débil en PDF de plataforma: a veces toma un departamento o una empresa.
 - La **experiencia** se calcula desde los períodos de fechas y descuenta superposiciones.
-- Los **CVs escaneados** (imagen, sin texto) no se pueden leer.
-
-Para probar las reglas sin levantar el servidor: `node scripts/probar-extraccion.js /ruta/a/cvs`.
-
-## Cambiar la base de datos
-
-Crear una clase con `listar`, `obtener`, `guardar` y `eliminar` (ver `interfaz-persistencia.js`)
-y pasarla a `validarPersistencia` en `server.js` en lugar de `PersistenciaJson`.
+- Los **CVs escaneados** (imagen sin texto) no se pueden leer; la app avisa y no inventa datos.
+- Si se actualizan pdf.js o mammoth, volver a copiar los archivos de `node_modules` a `public/vendor/`.
 
 ## Privacidad
 
-- Los CVs son datos personales entregados voluntariamente. Usar solo para selección.
-- No se usa ninguna IA ni servicio externo: el procesamiento es local.
+- Los CVs son datos personales entregados voluntariamente. Usarlos solo para selección.
+- No se usa ninguna IA ni servicio externo para procesar los datos.
 - La cédula se guarda enmascarada (últimos 3 dígitos).
-- El archivo `data/fichas.json` contiene datos personales: no subirlo a git ni compartirlo.
 - Revisar la finalidad, el consentimiento y el plazo de conservación según la Ley 18.331.
