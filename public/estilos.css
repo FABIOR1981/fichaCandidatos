@@ -1,3 +1,6 @@
+/* El atributo hidden debe ocultar siempre, aunque una regla de display lo contradiga. */
+[hidden] { display: none !important; }
+
 :root {
   --fondo: #f5f6f8;
   --superficie: #ffffff;
