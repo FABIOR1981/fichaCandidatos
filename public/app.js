@@ -115,16 +115,40 @@ async function cargarDepartamentos() {
   }
 }
 
-/** Llena las sugerencias de localidad según el departamento elegido. */
-function actualizarLocalidades(nombreDepartamento) {
-  const datalist = $('#lista-localidades');
+const OPCION_OTRA = '__otra__';
+
+/** Llena la lista de localidades del departamento: primero las precargadas, al final "Otra". */
+function actualizarLocalidades(nombreDepartamento, localidadSeleccionada = '') {
+  const form = $('#form-ficha');
+  const select = form.elements.localidad;
   const departamento = estado.departamentos.find((d) => d.nombre === nombreDepartamento);
-  datalist.innerHTML = departamento
-    ? departamento.localidades.map((l) => `<option value="${escapar(l)}"></option>`).join('')
-    : '';
-  $('#form-ficha').elements.localidad.placeholder = departamento
-    ? `Ej.: ${departamento.capital}`
-    : 'Elegí un departamento primero';
+  const precargadas = departamento ? departamento.localidades : [];
+
+  select.innerHTML = '<option value="">—</option>'
+    + precargadas.map((l) => `<option value="${escapar(l)}">${escapar(l)}</option>`).join('')
+    + `<option value="${OPCION_OTRA}">+ Otra localidad (escribir)</option>`;
+
+  if (localidadSeleccionada && !precargadas.includes(localidadSeleccionada)) {
+    select.value = OPCION_OTRA;
+    form.elements.localidad_otra.value = localidadSeleccionada;
+  } else {
+    select.value = localidadSeleccionada;
+    form.elements.localidad_otra.value = '';
+  }
+  mostrarCampoOtra();
+}
+
+function mostrarCampoOtra() {
+  const form = $('#form-ficha');
+  const escribiendo = form.elements.localidad.value === OPCION_OTRA;
+  form.elements.localidad_otra.hidden = !escribiendo;
+  if (escribiendo) form.elements.localidad_otra.focus();
+}
+
+/** La localidad elegida de la lista o, si es "Otra", el texto escrito. */
+function localidadDelFormulario(form) {
+  const valor = form.elements.localidad.value;
+  return (valor === OPCION_OTRA ? form.elements.localidad_otra.value : valor).trim() || null;
 }
 
 function abrirFormulario(contacto = null) {
@@ -134,12 +158,12 @@ function abrirFormulario(contacto = null) {
   $('#titulo-formulario').textContent = contacto ? 'Editar contacto' : 'Nuevo contacto';
   form.dataset.id = contacto ? contacto.id : '';
   if (contacto) {
-    for (const campo of ['nombre', 'telefono', 'email', 'localidad']) {
+    for (const campo of ['nombre', 'telefono', 'email']) {
       form.elements[campo].value = contacto[campo] ?? '';
     }
     form.elements.departamento.value = contacto.departamento ?? '';
   }
-  actualizarLocalidades(form.elements.departamento.value);
+  actualizarLocalidades(form.elements.departamento.value, contacto?.localidad ?? '');
   $('#formulario').hidden = false;
   $('#formulario').scrollIntoView({ behavior: 'smooth' });
   form.elements.nombre.focus();
@@ -154,7 +178,11 @@ async function guardarFormulario(evento) {
   const form = evento.target;
   const id = form.dataset.id;
   const datos = {};
-  for (const campo of CAMPOS) datos[campo] = form.elements[campo].value.trim() || null;
+  for (const campo of CAMPOS) {
+    datos[campo] = campo === 'localidad'
+      ? localidadDelFormulario(form)
+      : form.elements[campo].value.trim() || null;
+  }
 
   try {
     const contacto = id
@@ -254,6 +282,7 @@ function iniciar() {
   $('#form-ficha').elements.departamento.addEventListener('change', (e) => {
     actualizarLocalidades(e.target.value);
   });
+  $('#form-ficha').elements.localidad.addEventListener('change', mostrarCampoOtra);
 
   $('#btn-nueva').addEventListener('click', () => abrirFormulario());
   $('#btn-cancelar-form').addEventListener('click', cerrarFormulario);

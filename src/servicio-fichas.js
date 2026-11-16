@@ -22,7 +22,8 @@ function texto(valor, maximo = 120) {
  * manda sobre el departamento escrito (ej. "Dolores" siempre es Soriano).
  */
 function normalizarUbicacion(departamento, localidad) {
-  let dep = buscarDepartamento(departamento)?.nombre ?? texto(departamento, 60);
+  // El departamento solo puede ser uno de los 19 oficiales (o vacío).
+  let dep = buscarDepartamento(departamento)?.nombre ?? null;
   let loc = texto(localidad, 60);
   const ubicacion = ubicarLocalidad(loc, dep);
   if (ubicacion) {

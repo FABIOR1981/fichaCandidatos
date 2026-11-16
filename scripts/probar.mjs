@@ -30,6 +30,7 @@ assert.equal(u('Florida', 'cardal').departamento, 'Florida');
 assert.equal(u(null, 'Bella Union').departamento, 'Artigas');
 assert.equal(u('Soriano', 'Montevideo').departamento, 'Montevideo');
 assert.equal(u('Soriano', 'Pueblo Inventado').localidad, 'Pueblo Inventado');
+assert.equal(u('Inventado', null).departamento, null);
 console.log('ok  departamento y localidad');
 
 // 2) Agenda: alta manual, edición, duplicados, validación y eliminación
