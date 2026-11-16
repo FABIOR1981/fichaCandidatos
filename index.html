@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fichas de candidatos (prueba)</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header>
+    <h1>Fichas de candidatos <span class="etiqueta">prueba</span></h1>
+  </header>
+
+  <main>
+    <section class="carga">
+      <label class="zona-carga" id="zona-carga">
+        <input type="file" id="entrada-archivos" accept=".pdf,.docx" multiple hidden>
+        <strong>Subí CVs en PDF o Word</strong>
+        <span>Podés elegir varios a la vez</span>
+      </label>
+      <ul id="progreso" class="progreso"></ul>
+    </section>
+
+    <section class="listado">
+      <div class="barra">
+        <input type="search" id="buscar" placeholder="Buscar por nombre, cargo, ciudad…">
+        <span id="contador" class="contador"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Cargo</th>
+            <th>Teléfono</th>
+            <th>Email</th>
+            <th>Experiencia</th>
+            <th>Alertas</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-fichas"></tbody>
+      </table>
+    </section>
+
+    <section id="detalle" class="detalle" hidden></section>
+  </main>
+
+  <footer>
+    Datos personales de candidatos que los entregaron voluntariamente. Uso exclusivo para selección.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
