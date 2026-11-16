@@ -1,17 +1,7 @@
-const { normalizarTelefono, enmascararCedula } = require('./lib/telefono');
+const { normalizarTelefono } = require('./lib/telefono');
 const { extraerFichaConReglas } = require('./lib/reglas');
 
-const LARGO_MAXIMO_TEXTO = 300;
 const LARGO_MINIMO_TEXTO = 40;
-
-/** Alertas que se calculan al guardar, a partir de los datos actuales. */
-const ALERTAS_CALCULADAS = [
-  'nombre no detectado',
-  'sin teléfono válido',
-  'sin email',
-  'sin resumen',
-  'sin referencias',
-];
 
 class ErrorValidacion extends Error {
   constructor(mensaje, status = 400) {
@@ -20,100 +10,39 @@ class ErrorValidacion extends Error {
   }
 }
 
-function texto(valor, maximo = LARGO_MAXIMO_TEXTO) {
+function texto(valor, maximo = 120) {
   if (valor === null || valor === undefined) return null;
   const limpio = String(valor).trim();
   return limpio ? limpio.slice(0, maximo) : null;
 }
 
-function numero(valor) {
-  if (valor === null || valor === undefined || valor === '') return null;
-  const n = Number(valor);
-  return Number.isFinite(n) ? n : null;
-}
-
-function booleano(valor) {
-  if (valor === true || valor === 'true' || valor === 'Sí' || valor === 'sí') return true;
-  if (valor === false || valor === 'false' || valor === 'No' || valor === 'no') return false;
-  return null;
-}
-
-/** Acepta arreglos o texto separado por comas. */
-function lista(valor, maximo = 10) {
-  const items = Array.isArray(valor) ? valor : String(valor || '').split(',');
-  return items.map((i) => texto(i, 120)).filter(Boolean).slice(0, maximo);
-}
-
-function resumenDe({ cargo_actual_o_ultimo, anios_experiencia_total, personas_a_cargo_max }) {
-  return [
-    cargo_actual_o_ultimo || 'Cargo no identificado',
-    anios_experiencia_total !== null && anios_experiencia_total !== undefined
-      ? `${anios_experiencia_total} años de experiencia`
-      : null,
-    personas_a_cargo_max ? `hasta ${personas_a_cargo_max} personas a cargo` : null,
-  ].filter(Boolean).join(' · ');
-}
-
-/** Convierte cualquier entrada (manual o extraída) en una ficha con tipos y formatos correctos. */
-function normalizarFicha(entrada) {
-  const ficha = {
-    nombre_completo: texto(entrada.nombre_completo, 120),
-    cedula: enmascararCedula(entrada.cedula),
-    fecha_nacimiento: texto(entrada.fecha_nacimiento, 10),
-    edad: numero(entrada.edad),
-    ciudad: texto(entrada.ciudad),
-    departamento: texto(entrada.departamento),
-    nacionalidad: texto(entrada.nacionalidad),
-    telefono_principal: normalizarTelefono(entrada.telefono_principal),
-    telefono_alternativo: normalizarTelefono(entrada.telefono_alternativo),
+/** La agenda guarda solo: nombre, teléfono, email, departamento y localidad. */
+function normalizarContacto(entrada) {
+  return {
+    nombre: texto(entrada.nombre),
+    telefono: normalizarTelefono(entrada.telefono),
     email: texto(entrada.email)?.toLowerCase() || null,
-    redes_web: lista(entrada.redes_web, 5),
-    cargo_actual_o_ultimo: texto(entrada.cargo_actual_o_ultimo),
-    empresa_actual_o_ultima: texto(entrada.empresa_actual_o_ultima),
-    anios_experiencia_total: numero(entrada.anios_experiencia_total),
-    cantidad_empleos: numero(entrada.cantidad_empleos),
-    personas_a_cargo_max: numero(entrada.personas_a_cargo_max),
-    competencias_clave: lista(entrada.competencias_clave, 5),
-    formacion_maxima: texto(entrada.formacion_maxima),
-    titulos: Array.isArray(entrada.titulos)
-      ? entrada.titulos
-          .map((t) => (typeof t === 'string' ? { titulo: texto(t), institucion: null, estado: null } : t))
-          .filter((t) => t && t.titulo)
-          .slice(0, 10)
-      : [],
-    idiomas: lista(entrada.idiomas),
-    cursos_certificaciones: lista(entrada.cursos_certificaciones, 20),
-    licencia_conducir: texto(entrada.licencia_conducir, 10),
-    vehiculo_propio: booleano(entrada.vehiculo_propio),
-    destinos_preferidos: lista(entrada.destinos_preferidos),
-    referencias_cargadas: booleano(entrada.referencias_cargadas),
-    perfil_texto: texto(entrada.perfil_texto, 1000),
-    notas: texto(entrada.notas, 2000),
+    departamento: texto(entrada.departamento, 60),
+    localidad: texto(entrada.localidad, 60),
   };
-  ficha.resumen = resumenDe(ficha);
-  return ficha;
 }
 
-/** Alertas derivadas de los datos + alertas de la extracción + posibles duplicados. */
-function calcularAlertas(ficha, otrasFichas, alertasOrigen = []) {
+/** Alertas que se recalculan al guardar, comparando con el resto de la agenda. */
+function calcularAlertas(contacto, otros, id) {
   const alertas = [];
-  if (!ficha.nombre_completo) alertas.push('nombre no detectado');
-  if (!ficha.telefono_principal) alertas.push('sin teléfono válido');
-  if (!ficha.email) alertas.push('sin email');
-  if (!ficha.perfil_texto) alertas.push('sin resumen');
-  if (ficha.referencias_cargadas === false) alertas.push('sin referencias');
+  if (!contacto.nombre) alertas.push('nombre no detectado');
+  if (!contacto.telefono) alertas.push('sin teléfono');
+  if (!contacto.email) alertas.push('sin email');
 
-  for (const otra of otrasFichas) {
-    if (otra.id === ficha.id) continue;
-    const mismoEmail = ficha.email && otra.email === ficha.email;
-    const mismoTelefono = ficha.telefono_principal && otra.telefono_principal === ficha.telefono_principal;
+  for (const otro of otros) {
+    if (otro.id === id) continue;
+    const mismoEmail = contacto.email && otro.email === contacto.email;
+    const mismoTelefono = contacto.telefono && otro.telefono === contacto.telefono;
     if (mismoEmail || mismoTelefono) {
-      alertas.push(`posible duplicado de ${otra.nombre_completo || 'otra ficha'}`);
+      alertas.push(`posible duplicado de ${otro.nombre || 'otro contacto'}`);
     }
   }
-
-  const origen = alertasOrigen.filter((a) => !ALERTAS_CALCULADAS.includes(a));
-  return [...new Set([...alertas, ...origen])];
+  return alertas;
 }
 
 class ServicioFichas {
@@ -122,31 +51,30 @@ class ServicioFichas {
   }
 
   async listar() {
-    const fichas = await this.persistencia.listar();
-    return fichas;
+    return this.persistencia.listar();
   }
 
   async obtener(id) {
     const ficha = await this.persistencia.obtener(id);
-    if (!ficha) throw new ErrorValidacion('Ficha no encontrada', 404);
+    if (!ficha) throw new ErrorValidacion('Contacto no encontrado', 404);
     return ficha;
   }
 
   async crearManual(datos) {
-    const base = normalizarFicha(datos);
-    if (!base.nombre_completo) throw new ErrorValidacion('El nombre es obligatorio');
+    const contacto = normalizarContacto(datos);
+    if (!contacto.nombre) throw new ErrorValidacion('El nombre es obligatorio');
 
-    const otras = await this.persistencia.listar();
-    const ficha = {
-      ...base,
-      id: globalThis.crypto.randomUUID(),
-      metodo_extraccion: 'manual',
+    const id = globalThis.crypto.randomUUID();
+    const otros = await this.persistencia.listar();
+    const ahora = new Date().toISOString();
+    return this.persistencia.guardar({
+      ...contacto,
+      id,
       archivo_origen: null,
-      creada_en: new Date().toISOString(),
-      actualizada_en: new Date().toISOString(),
-    };
-    ficha.alertas = calcularAlertas(ficha, otras);
-    return this.persistencia.guardar(ficha);
+      alertas: calcularAlertas(contacto, otros, id),
+      creada_en: ahora,
+      actualizada_en: ahora,
+    });
   }
 
   async crearDesdeTexto(nombreArchivo, textoCv) {
@@ -158,45 +86,47 @@ class ServicioFichas {
     }
 
     const extraida = extraerFichaConReglas(textoCv);
-    const base = normalizarFicha(extraida);
-    const otras = await this.persistencia.listar();
-    const ficha = {
-      ...base,
-      id: globalThis.crypto.randomUUID(),
-      metodo_extraccion: 'reglas-locales',
+    const contacto = normalizarContacto({
+      nombre: extraida.nombre_completo,
+      telefono: extraida.telefono_principal,
+      email: extraida.email,
+      departamento: extraida.departamento,
+      localidad: extraida.ciudad,
+    });
+
+    const id = globalThis.crypto.randomUUID();
+    const otros = await this.persistencia.listar();
+    const ahora = new Date().toISOString();
+    return this.persistencia.guardar({
+      ...contacto,
+      id,
       archivo_origen: texto(nombreArchivo, 200),
-      alertas_origen: extraida.alertas,
-      creada_en: new Date().toISOString(),
-      actualizada_en: new Date().toISOString(),
-    };
-    ficha.alertas = calcularAlertas(ficha, otras, ficha.alertas_origen);
-    return this.persistencia.guardar(ficha);
+      alertas: calcularAlertas(contacto, otros, id),
+      creada_en: ahora,
+      actualizada_en: ahora,
+    });
   }
 
   async actualizar(id, datos) {
     const actual = await this.obtener(id);
-    const base = normalizarFicha({ ...actual, ...datos });
-    if (!base.nombre_completo) throw new ErrorValidacion('El nombre es obligatorio');
+    const contacto = normalizarContacto({ ...actual, ...datos });
+    if (!contacto.nombre) throw new ErrorValidacion('El nombre es obligatorio');
 
-    const otras = await this.persistencia.listar();
-    const ficha = {
-      ...actual,
-      ...base,
+    const otros = await this.persistencia.listar();
+    return this.persistencia.guardar({
+      ...contacto,
       id: actual.id,
-      metodo_extraccion: actual.metodo_extraccion,
       archivo_origen: actual.archivo_origen,
-      alertas_origen: actual.alertas_origen || [],
+      alertas: calcularAlertas(contacto, otros, id),
       creada_en: actual.creada_en,
       actualizada_en: new Date().toISOString(),
-    };
-    ficha.alertas = calcularAlertas(ficha, otras, ficha.alertas_origen);
-    return this.persistencia.guardar(ficha);
+    });
   }
 
   async eliminar(id) {
     const eliminada = await this.persistencia.eliminar(id);
-    if (!eliminada) throw new ErrorValidacion('Ficha no encontrada', 404);
+    if (!eliminada) throw new ErrorValidacion('Contacto no encontrado', 404);
   }
 }
 
-module.exports = { ServicioFichas, ErrorValidacion, normalizarFicha };
+module.exports = { ServicioFichas, ErrorValidacion, normalizarContacto };

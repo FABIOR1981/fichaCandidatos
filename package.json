@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "probar": "node scripts/probar.mjs"
+    "probar": "node scripts/probar.mjs",
+    "unico": "node scripts/generar-worker-unico.mjs"
   },
   "devDependencies": {
     "mammoth": "^1.13.0",

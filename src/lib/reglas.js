@@ -238,7 +238,8 @@ function extraerFichaConReglas(texto) {
     return m ? { iso: `${m[3]}-${m[2]}-${m[1]}`, edad: Number(m[4]) } : { iso: null, edad: null };
   })();
 
-  const ciudadMatch = texto.match(/([^\n,]+),\s*([^\n,]+),\s*Uruguay/);
+  // "Mercedes, Soriano, Uruguay" o "Mercedes, Soriano  |  099 ..." (el Word no trae "Uruguay")
+  const ciudadMatch = texto.match(/([^\n,|]+),\s*([^\n,|]+?)\s*(?:,\s*Uruguay|\s*\||\s*$)/m);
   const personasMatches = [...texto.matchAll(/(\d{1,3})\s+personas a cargo/gi)].map((m) => Number(m[1]));
   const personasACargo = personasMatches.length ? Math.max(...personasMatches) : null;
 
